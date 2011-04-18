@@ -1,0 +1,3 @@
+a buggy, rudimentary, just-for-fun javascript physics simulator.
+
+open bounce.html in any web browser that supports html5 canvas.
