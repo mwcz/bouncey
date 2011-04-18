@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!-- saved from url=(0027)http://zipt.org/bounce.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+
+<title>~\workspace\bounce.html.html</title>
+<meta name="Generator" content="Vim/7.3">
+<meta name="plugin-version" content="vim7.3_v6">
+<meta name="syntax" content="html">
+<meta name="settings" content="use_css">
+<style type="text/css">
+<!--
+pre  { font-family: Terminus, monospace; color: #dcdccc; background-color: #1f1f1f; }
+body { font-family: Terminus, monospace; color: #dcdccc; background-color: #1f1f1f; }
+canvas { border: 1px solid grey; }
+-->
+</style>
+
+<script type="text/javascript">
+<!--
+
+var FPS    = 60;         // frames per second
+var PERIOD = 1000 / FPS; // frames last PERIOD milliseconds
+var W      = 500;        // canvas width
+var H      = 375;        // canvas height
+var OBJ_W  = 20;
+var OBJ_H  = OBJ_W;
+
+/********************************************************************
+ * This is the most confusing part.  'objs' is an array of objects. *
+ * They are stored in this format:                                  *
+ * objs = [                                                         *
+ *           ...,                                                   *
+ *           [ x, y, vx, vy, w, h, [r,g,b] ],                       *
+ *           ...,                                                   *
+ *        ];                                                        *
+ * Legend:                                                          *
+ *     x : the object's x-axis position                             *
+ *     y : the object's y-axis position                             *
+ *     vx: the object's x-axis velocity                             *
+ *     vy: the object's y-ayis velocity                             *
+ *     w : the object's width                                       *
+ *     h : the object's height                                      *
+ *     r : the object's r-channel color value                       *
+ *     g : the object's g-channel color value                       *
+ *     b : the object's b-channel color value                       *
+ ********************************************************************/
+objs = [];
+
+function make_frame() {     // stuff to do for each frame
+    update();
+    paint();
+}
+
+/***************************************************
+ * update all the objects positions and velocities *
+ ***************************************************/
+function update() {
+
+    var x_col = false;
+    var y_col = false;
+
+    for ( var o = objs.length - 1; o >= 0; --o ) {
+
+                                             // x-axis collisions:
+        x_col = objs[o][0] + objs[o][4] >= W // right wall collision
+             || objs[o][0] <= 0              // top wall collision
+             ;
+                                             // y-axis collisions:
+        y_col = objs[o][1] + objs[o][5] >= H // bottom wall collision
+             || objs[o][1] <= 0              // left wall collision
+             ;
+
+        if( x_col ) objs[o][2] *= -1;
+        if( y_col ) objs[o][3] *= -1;
+
+        /* this is ugly */
+        /*
+        */
+        for ( var p = objs.length - 1; p >= 0; --p ) {
+
+            if( o == p ) continue;
+
+            if ( ( collision = collide( o, p ) ) ) {
+
+                // after a collision, the velocity of each object changes only on
+                // the axis on which the collision took place.
+                // i.e. - zero friction
+                if ( collision == 1 ) {
+                    var dvx = objs[p][2] - objs[o][2]; // delta v on the x-axis
+                    objs[o][2] += dvx;
+                    objs[p][2] -= dvx;
+                } else if ( collision == 2 ) {
+                    var dvy = objs[p][3] - objs[o][3]; // delta v on the y-ayis
+                    objs[o][3] += dvy;
+                    objs[p][3] -= dvy;
+                }
+                break;
+            }
+
+        }
+
+        objs[o][0] = objs[o][0] + objs[o][2] * 1/FPS;
+        objs[o][1] = objs[o][1] + objs[o][3] * 1/FPS;
+    }
+}
+
+/********************************************
+ * paint a frame by drawing all the objects *
+ ********************************************/
+function paint() {
+    canvas.clearRect(0,0,W,H);
+    for( var o = objs.length - 1; o >= 0; --o ) {
+        canvas.fillStyle = 'rgb(' + objs[o][6][0] + ',' + objs[o][6][1] + ',' + objs[o][6][2] + ')';
+        canvas.fillRect( objs[o][0], objs[o][1], objs[o][4], objs[o][5] );
+    }
+}
+
+/********************************************************
+ * returns true if _o1 and _o2 overlap, false otherwise *
+ ********************************************************/
+function collide( _o1, _o2 ) {
+
+    x1 = objs[_o1][0];
+    y1 = objs[_o1][1];
+    w1 = objs[_o1][4];
+    h1 = objs[_o1][5];
+
+    x2 = objs[_o2][0];
+    y2 = objs[_o2][1];
+    w2 = objs[_o2][4];
+    h2 = objs[_o2][5];
+
+    var x_collide = false;
+    var y_collide = false;
+
+    if ( x1 < x2 )
+        x_collide = ( x2 - x1 ) <= w1;
+    else
+        x_collide = ( x1 - x2 ) <= w2;
+
+    if ( y1 < y2 )
+        y_collide = ( y2 - y1 ) <= h1;
+    else
+        y_collide = ( y1 - y2 ) <= h2;
+
+    if ( !x_collide || !y_collide ) return 0;
+
+    var x_diff = Math.abs( x1 - x2 );
+    var y_diff = Math.abs( y1 - y2 );
+
+    // 0 = no collision, 1 = x-axis collision, 2 = y-axis collision
+    return ( x_diff > y_diff ) ? 1 : 2;
+
+}
+
+/*********************************************************************************************
+ * given an object's id, calculates the next position based on current position and veclotiy *
+ *********************************************************************************************/
+function nextloc( _oid ) {
+    
+}
+
+
+window.onload = function() {
+
+    canvas_element        = document.getElementById('cnvs');
+    canvas_element.width  = W;
+    canvas_element.height = H;
+
+    canvas = canvas_element.getContext('2d');
+    canvas.fillStyle = 'rgb(162,162,162)';
+
+    // create some squares with random velocities in the center of the canvas
+    // objects are stored in the format 
+    //      [ X, Y, X_velocity, Y_velocity, width, height, [R,G,B] ]
+    var x, y, w, h, v_x, v_y, r, g, b;
+
+    //for( var i = 0; i < Math.floor(W/20); ++i ) {
+    /*
+    */
+    for( var i = 0; i < 15; ++i ) {
+
+        // create values for the object
+        x   = ( OBJ_W * 2 * (i+1) ) % W;
+        y   = ( OBJ_H * 2 ) * Math.ceil( ( OBJ_W * 2 * (i+1) ) / W );
+        v_x = Math.random() * W/2 - W/4;
+        v_y = Math.random() * H/2 - H/4;
+        w   = OBJ_W; // scale based on canvas size
+        h   = OBJ_H; // squares
+        r   = Math.floor( Math.random() * 200 + 55 ); // random value 55..255
+        g   = Math.floor( Math.random() * 200 + 55 );
+        b   = Math.floor( Math.random() * 200 + 55 );
+
+        // add the object to the scene
+        objs.push( [ x, y, v_x, v_y, w, h, [r,g,b] ] );
+    }
+
+  // Test Cases:
+  //objs.push( [ 20          ,  20,  60,   0, OBJ_W, OBJ_H, [255, 0  , 0] ] );
+  //objs.push( [ W-(20+OBJ_W),  20, -60,   0, OBJ_W, OBJ_H, [0  , 255, 0] ] );
+  //objs.push( [ 20          ,  60, 120,   0, OBJ_W, OBJ_H, [0  , 0  , 255] ] );
+  //objs.push( [ W/2         ,  60,  30,   0, OBJ_W, OBJ_H, [255, 255, 0] ] );
+  //objs.push( [ 20          , 100,  60,   0, OBJ_W, OBJ_H, [255, 0  , 255] ] );
+  //objs.push( [ W-(20+OBJ_W), 100, -30,   0, OBJ_W, OBJ_H, [0  , 255, 255] ] );
+    /* These two cause the objects to bind together inappropriately */
+  //objs.push( [ 20          ,  20,  20,  10, OBJ_W, OBJ_H, [255, 0  , 255] ] );
+  //objs.push( [ 80          ,  39, -80,  10, OBJ_W, OBJ_H, [0  , 255, 255] ] );
+
+    setInterval( make_frame, PERIOD );
+
+    /* can this work?
+    setInterval( update, 1 );
+    setInterval( make_frame, PERIOD );
+    */
+
+}
+
+
+
+
+
+-->
+</script>
+
+</head>
+<body>
+<pre>
+bounce demo
+
+<canvas id="cnvs" width="500" height="375">
+</canvas>
+
+</pre>
+
+
+
+</body></html>
