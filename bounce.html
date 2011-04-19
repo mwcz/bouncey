@@ -1,29 +1,107 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<!-- saved from url=(0027)http://zipt.org/bounce.html -->
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 
 <title>~\workspace\bounce.html.html</title>
 <meta name="Generator" content="Vim/7.3">
 <meta name="plugin-version" content="vim7.3_v6">
 <meta name="syntax" content="html">
 <meta name="settings" content="use_css">
+
 <style type="text/css">
 <!--
-pre  { font-family: Terminus, monospace; color: #dcdccc; background-color: #1f1f1f; }
-body { font-family: Terminus, monospace; color: #dcdccc; background-color: #1f1f1f; }
-canvas { border: 1px solid grey; }
+    pre  { font-family: Terminus, monospace; color: #dcdccc; background-color: #1f1f1f; }
+    body { font-family: Terminus, monospace; color: #dcdccc; background-color: #1f1f1f; }
+    canvas { border: 1px solid grey; }
 -->
 </style>
 
 <script type="text/javascript">
 <!--
 
+/****************************************************************
+ * BounceObject                                                 *
+ * this class is the parent class of all objects that get drawn *
+ * on the canvas.                                               *
+ * @param _x  the x coordinate                                  *
+ * @param _y  the y coordinate                                  *
+ * @param _vx the initial x velocity                            *
+ * @param _vy the initial y velocity                            *
+ ****************************************************************/
+function BounceObject( _x, _y, _vx, _vy, _c ) {
+    this.color = _c;
+    this.x     = _x;
+    this.y     = _y;
+    this.vx    = _vx;
+    this.vy    = _vy;
+}
+
+// The default draw function does nothing
+BounceObject.prototype.draw    = function() { }
+
+// Collide SHOULD accept any other BounceObject and
+// determine if the instance collides with that
+// object.  I have a few ideas of how to implement
+// this, but none of them are clean.  Right now, I
+// think I'll implement it as ONLY detecting collisions
+// between BounceObjects of the same subclass,
+// Circle hits Circle, for example, but no Circle
+// hits Rectangle.
+BounceObject.prototype.collide = function() { }
+
+/*************************************************************
+ * class Circle                                              *
+ * a plain ol' circle                                        *
+ * @param _r  the radius                                      *
+ * @param _c  the color in rgb(R,G,B) or rgba(R,G,B,A) format *
+ *************************************************************/
+
+Circle.prototype = new BounceObject;
+Circle.prototype.constructor = Circle;
+
+Circle.prototype.draw = function( _canvas ) {
+    _canvas.fillStyle = this.color;
+    _canvas.beginPath();
+    _canvas.arc( this.x, this.y, this.r, 0, PI2, true );
+    _canvas.closePath();
+    _canvas.fill();
+};
+
+Circle.prototype.collide = function( _obj ) {
+    // TODO: resume here!
+}
+
+function Circle( _x, _y, _r, _vx, _vy, _c ) {
+
+    // call the superclass's constructor and pass in the variables it cares about
+    BounceObject.call( this, _x, _y, _vx, _vy, _c );
+
+    // initialize this class's variables
+    this.r = _r;
+
+}
+
+
+/*******************
+ * Global settings *
+ *******************/
 var FPS    = 60;         // frames per second
 var PERIOD = 1000 / FPS; // frames last PERIOD milliseconds
 var W      = 500;        // canvas width
 var H      = 375;        // canvas height
-var OBJ_W  = 20;
-var OBJ_H  = OBJ_W;
+var OBJ_R  = 10;
+var OBJ_W  = 10;
+var OBJ_H  = 10;
+var PI2    = Math.PI * 2;
+
+/***********************
+ * toggleable settings *
+ ***********************/
+var paused = false;
 
 /********************************************************************
  * This is the most confusing part.  'objs' is an array of objects. *
@@ -56,26 +134,31 @@ function make_frame() {     // stuff to do for each frame
  ***************************************************/
 function update() {
 
-    var x_col = false;
-    var y_col = false;
+    if ( paused ) return; // this is kind of a hack
+
+    var x_col  = false;
+    var y_col  = false;
+    var curobj = new Object();
 
     for ( var o = objs.length - 1; o >= 0; --o ) {
+    
+        curobj = objs[o];
 
-                                             // x-axis collisions:
-        x_col = objs[o][0] + objs[o][4] >= W // right wall collision
-             || objs[o][0] <= 0              // top wall collision
-             ;
-                                             // y-axis collisions:
-        y_col = objs[o][1] + objs[o][5] >= H // bottom wall collision
-             || objs[o][1] <= 0              // left wall collision
+        // x-axis collisions:
+        x_col = curobj.x + curobj.r >= W    // right wall collision
+             || curobj.x - curobj.r <= 0    // left wall collision
              ;
 
-        if( x_col ) objs[o][2] *= -1;
-        if( y_col ) objs[o][3] *= -1;
+        // y-axis collisions:
+        y_col = curobj.y + curobj.r >= H    // bottom wall collision
+             || curobj.y - curobj.r <= 0    // top wall collision
+             ;
+
+        if( x_col ) curobj.vx *= -1;
+        if( y_col ) curobj.vy *= -1;
 
         /* this is ugly */
         /*
-        */
         for ( var p = objs.length - 1; p >= 0; --p ) {
 
             if( o == p ) continue;
@@ -86,21 +169,22 @@ function update() {
                 // the axis on which the collision took place.
                 // i.e. - zero friction
                 if ( collision == 1 ) {
-                    var dvx = objs[p][2] - objs[o][2]; // delta v on the x-axis
-                    objs[o][2] += dvx;
-                    objs[p][2] -= dvx;
+                    var dvx = objs[p].vx - curobj.vx; // delta v on the x-axis
+                    curobj.vx += dvx;
+                    objs[p].vx -= dvx;
                 } else if ( collision == 2 ) {
-                    var dvy = objs[p][3] - objs[o][3]; // delta v on the y-ayis
-                    objs[o][3] += dvy;
-                    objs[p][3] -= dvy;
+                    var dvy = objs[p].vy - curobj.vy; // delta v on the y-ayis
+                    curobj.vy += dvy;
+                    objs[p].vy -= dvy;
                 }
                 break;
             }
 
         }
+        */
 
-        objs[o][0] = objs[o][0] + objs[o][2] * 1/FPS;
-        objs[o][1] = objs[o][1] + objs[o][3] * 1/FPS;
+        curobj.x = curobj.x + curobj.vx * 1/FPS;
+        curobj.y = curobj.y + curobj.vy * 1/FPS;
     }
 }
 
@@ -108,10 +192,15 @@ function update() {
  * paint a frame by drawing all the objects *
  ********************************************/
 function paint() {
+
+    if ( paused ) return; // this is kind of a hack
+
     canvas.clearRect(0,0,W,H);
+
     for( var o = objs.length - 1; o >= 0; --o ) {
-        canvas.fillStyle = 'rgb(' + objs[o][6][0] + ',' + objs[o][6][1] + ',' + objs[o][6][2] + ')';
-        canvas.fillRect( objs[o][0], objs[o][1], objs[o][4], objs[o][5] );
+
+        objs[o].draw( canvas );
+
     }
 }
 
@@ -120,44 +209,26 @@ function paint() {
  ********************************************************/
 function collide( _o1, _o2 ) {
 
-    x1 = objs[_o1][0];
-    y1 = objs[_o1][1];
-    w1 = objs[_o1][4];
-    h1 = objs[_o1][5];
+    var x1     = Math.abs( Math.round( _o1.x ) );
+    var y1     = Math.abs( Math.round( _o1.y ) );
+    var r1     = _o1.r;
 
-    x2 = objs[_o2][0];
-    y2 = objs[_o2][1];
-    w2 = objs[_o2][4];
-    h2 = objs[_o2][5];
+    var x2     = Math.abs( Math.round( _o2.x ) );
+    var y2     = Math.abs( Math.round( _o2.y ) );
+    var r2     = _o2.r;
 
-    var x_collide = false;
-    var y_collide = false;
+    var x_hit  = false;
+    var y_hit  = false;
 
-    if ( x1 < x2 )
-        x_collide = ( x2 - x1 ) <= w1;
-    else
-        x_collide = ( x1 - x2 ) <= w2;
+    var x_dist = Math.abs( x2 - x1 );
+    var y_dist = Math.abs( y2 - y1 );
+    var dist   = Math.sqrt( x_dist^2 + y_dist^2 );
 
-    if ( y1 < y2 )
-        y_collide = ( y2 - y1 ) <= h1;
-    else
-        y_collide = ( y1 - y2 ) <= h2;
+    // if the distance between _o1's center and _o2's center
+    // is less than or equal to r1+r2, then they have collided
 
-    if ( !x_collide || !y_collide ) return 0;
+    return dist <= r1 + r2;
 
-    var x_diff = Math.abs( x1 - x2 );
-    var y_diff = Math.abs( y1 - y2 );
-
-    // 0 = no collision, 1 = x-axis collision, 2 = y-axis collision
-    return ( x_diff > y_diff ) ? 1 : 2;
-
-}
-
-/*********************************************************************************************
- * given an object's id, calculates the next position based on current position and veclotiy *
- *********************************************************************************************/
-function nextloc( _oid ) {
-    
 }
 
 
@@ -168,31 +239,40 @@ window.onload = function() {
     canvas_element.height = H;
 
     canvas = canvas_element.getContext('2d');
-    canvas.fillStyle = 'rgb(162,162,162)';
 
     // create some squares with random velocities in the center of the canvas
     // objects are stored in the format 
     //      [ X, Y, X_velocity, Y_velocity, width, height, [R,G,B] ]
-    var x, y, w, h, v_x, v_y, r, g, b;
+    var x, y, w, h, v_x, v_y, r, g, b, new_obj;
 
-    //for( var i = 0; i < Math.floor(W/20); ++i ) {
+    // calculate all the possible initial y positions
+    y_positions = [];
+    for( var i = H % (2*OBJ_R+10) - 1; i >= 0; --i )
+        y_positions.push( (i+1) * (2*OBJ_R+10)/2 );
+
+    // calculate all the possible initial x positions
+    x_positions = [];
+    for( var i = W % (2*OBJ_R+10) - 1; i >= 0; --i )
+        x_positions.push( (i+1) * (2*OBJ_R+10)/2 );
+
     /*
     */
-    for( var i = 0; i < 15; ++i ) {
+    for( var i = 0; i < 75; ++i ) {
 
         // create values for the object
-        x   = ( OBJ_W * 2 * (i+1) ) % W;
-        y   = ( OBJ_H * 2 ) * Math.ceil( ( OBJ_W * 2 * (i+1) ) / W );
-        v_x = Math.random() * W/2 - W/4;
-        v_y = Math.random() * H/2 - H/4;
-        w   = OBJ_W; // scale based on canvas size
-        h   = OBJ_H; // squares
+        x   = x_positions[ i % x_positions.length ];
+        y   = y_positions[ i % y_positions.length ];
+        v_x = Math.random() * 200;
+        v_y = Math.random() * 200;
         r   = Math.floor( Math.random() * 200 + 55 ); // random value 55..255
         g   = Math.floor( Math.random() * 200 + 55 );
         b   = Math.floor( Math.random() * 200 + 55 );
 
         // add the object to the scene
-        objs.push( [ x, y, v_x, v_y, w, h, [r,g,b] ] );
+        var color = 'rgb(' + r + ',' + g + ',' + b + ')';
+        var new_obj = new Circle( x, y, OBJ_R, v_x, v_y, color );
+
+        objs.push( new_obj );
     }
 
   // Test Cases:
