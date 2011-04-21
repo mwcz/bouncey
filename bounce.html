@@ -247,23 +247,24 @@ window.onload = function() {
 
     // calculate all the possible initial y positions
     y_positions = [];
-    for( var i = H % (2*OBJ_R+10) - 1; i >= 0; --i )
-        y_positions.push( (i+1) * (2*OBJ_R+10)/2 );
+    for( var i = 0; i < ( H % (2*OBJ_R+20) ); ++i )
+        y_positions.push( (i+1) * (2*OBJ_R+20)/2 );
 
     // calculate all the possible initial x positions
     x_positions = [];
-    for( var i = W % (2*OBJ_R+10) - 1; i >= 0; --i )
-        x_positions.push( (i+1) * (2*OBJ_R+10)/2 );
+    for( var i = 0; i < ( W % (2*OBJ_R+20) ); ++i )
+        x_positions.push( (i+1) * (2*OBJ_R+20)/2 );
 
     /*
     */
-    for( var i = 0; i < 75; ++i ) {
+    for( var i = 0; i < 600; ++i ) {
 
         // create values for the object
         x   = x_positions[ i % x_positions.length ];
-        y   = y_positions[ i % y_positions.length ];
-        v_x = Math.random() * 200;
-        v_y = Math.random() * 200;
+        y   = y_positions[ Math.floor( i / x_positions.length ) % y_positions.length ];
+        console.log("[%d,%d]", x, y );
+        v_x = Math.random() * 200 - 100;
+        v_y = Math.random() * 200 - 100;
         r   = Math.floor( Math.random() * 200 + 55 ); // random value 55..255
         g   = Math.floor( Math.random() * 200 + 55 );
         b   = Math.floor( Math.random() * 200 + 55 );
