@@ -43,8 +43,6 @@ var PI2              = Math.PI * 2;
  ***********************/
 var paused = false;
 
-var oldlocs = []; // holds past obj positions
-
 
 /****************************************************************
  * BounceObject                                                 *
@@ -103,7 +101,7 @@ Circle.prototype.collide = function( _obj ) {
 
     return  ( this.x - _obj.x ) * ( this.x - _obj.x )
           + ( this.y - _obj.y ) * ( this.y - _obj.y )
-         <= ( this.r + _obj.r ) * ( this.r + _obj.r );
+          < ( this.r + _obj.r ) * ( this.r + _obj.r );
  
 }
 
