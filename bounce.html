@@ -147,24 +147,25 @@ function update() {
 
     var x_col  = false;
     var y_col  = false;
-    var curobj = new Object();
+    var o1 = new Object();
 
     for ( var o = objs.length - 1; o >= 0; --o ) {
     
-        curobj = objs[o];
+        o1 = objs[o];
+        var vcpt = { x : 0, y : 0 };
 
         // x-axis collisions:
-        x_col = curobj.x + curobj.r >= W    // right wall collision
-             || curobj.x - curobj.r <= 0    // left wall collision
+        x_col = o1.x + o1.r >= W    // right wall collision
+             || o1.x - o1.r <= 0    // left wall collision
              ;
 
         // y-axis collisions:
-        y_col = curobj.y + curobj.r >= H    // bottom wall collision
-             || curobj.y - curobj.r <= 0    // top wall collision
+        y_col = o1.y + o1.r >= H    // bottom wall collision
+             || o1.y - o1.r <= 0    // top wall collision
              ;
 
-        if( x_col ) curobj.vx *= -1;
-        if( y_col ) curobj.vy *= -1;
+        if( x_col ) o1.vx *= -1;
+        if( y_col ) o1.vy *= -1;
 
         /* this is ugly */
         /*
@@ -173,15 +174,65 @@ function update() {
 
             if( o == p ) continue;
 
-            if ( curobj.collide( objs[p] ) ) {
-                console.log("HIT!");                
+            if ( o1.collide( objs[p] ) ) {
+                //console.log("HIT!");                
+                // TODO: this can be optimized A LOT
+                var o1 = o1;
+                //console.log("o1: [%d,%d]", o1.x, o1.y );
+                var o2 = objs[p];
+                //console.log("o2: [%d,%d]", o2.x, o2.y );
+                var d = { x : o2.x - o1.x, 
+                          y : o2.y - o1.y };
+                //console.log("d: [%d,%d]", d.x, d.y );
+
+                // vector tangent to the collision
+                var t = { x : -1*d.y,
+                          y : d.x };
+
+                t = normalize( t );
+                //console.log("t: [%d,%d]", t.x, t.y );
+                
+                // relative velocity between objects
+                var r = { x : o1.vx - o2.vx,
+                          y : o1.vy - o2.vy };
+                //console.log("r: [%d,%d]", r.x, r.y );
+
+                // length of velocity parallel to tangent
+                var l = r.x*t.x + r.y*t.y;
+                //console.log("l: %d", l );
+
+                // velocity component parallel to tangent
+                var v = { x : l * t.x,
+                          y : l * t.y };
+                //console.log("v: [%d,%d]", v.x, v.y );
+
+                // velocity component perpendicular to the tangent
+                vcpt = { x : r.x - v.x,
+                      y : r.y - v.y };
+                //console.log("vcpt: [%d,%d]", vcpt.x, vcpt.y );
+                o1.vx -= vcpt.x;
+                o1.vy -= vcpt.y;
+                o2.vx += vcpt.x;
+                o2.vy += vcpt.y;
+
             }
 
         }
 
-        curobj.x = curobj.x + curobj.vx * 1/FPS;
-        curobj.y = curobj.y + curobj.vy * 1/FPS;
+        console.log(vcpt.x,vcpt.y);
+        o1.x += o1.vx*1/FPS;
+        o1.y += o1.vy*1/FPS;
     }
+}
+
+/************************************************************
+ * normalizes a vector2.  returns a unit vector in the same *
+ * direction as the original vector.                        *
+ ************************************************************/
+function normalize( _v ) {
+    var m = Math.sqrt( _v.x * _v.x + _v.y * _v.y );
+    return { x : _v.x / m,
+             y : _v.y / m };
 }
 
 /********************************************
@@ -253,7 +304,7 @@ window.onload = function() {
 
     /*
     */
-    for( var i = 0; i < 2; ++i ) {
+    for( var i = 0; i < 20; ++i ) {
 
         // create values for the object
         x   = x_positions[ i % x_positions.length ];
