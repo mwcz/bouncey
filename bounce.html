@@ -30,13 +30,17 @@ var FPS              = 60;              // frames per second
 var PERIOD           = 1000 / FPS;      // frames last PERIOD milliseconds
 var W                = 500;             // canvas width
 var H                = 375;             // canvas height
-var OBJ_R            = 10;
-var OBJ_PAD          = 20;              // padding around the starting positions of the objects
+var OBJ_R            = 4;
+var OBJ_PAD          = 5;              // padding around the starting positions of the objects
 var OBJ_WIDTH        = OBJ_R + OBJ_PAD; // width of an object, including padding
 var OBJ_HEIGHT       = OBJ_R + OBJ_PAD; // height of an object, including padding
 var OBJ_MAX_VELOCITY = 100;             // object maximum velocity
-var OBJ_COUNT        = 100;             // object maximum velocity
+var OBJ_COUNT        = 200;             // object maximum velocity
 var PI2              = Math.PI * 2;
+var DEFAULT_COLOR    = [255,0,0];
+var Gy               = 9.618;           // gravity along y axis
+var Gx               = 0;               // gravity along x axis
+var FRICTION         = 0.01;           // friction coefficient
 
 /***********************
  * changeable settings *
@@ -74,12 +78,12 @@ BounceObject.prototype.draw    = function() { }
 // hits Rectangle.
 BounceObject.prototype.collide = function() { }
 
-/*************************************************************
- * class Circle                                              *
- * a plain ol' circle                                        *
+/**************************************************************
+ * class Circle                                               *
+ * a plain ol' circle                                         *
  * @param _r  the radius                                      *
  * @param _c  the color in rgb(R,G,B) or rgba(R,G,B,A) format *
- *************************************************************/
+ **************************************************************/
 
 Circle.prototype = new BounceObject;
 Circle.prototype.constructor = Circle;
@@ -102,7 +106,11 @@ Circle.prototype.collide = function( _obj ) {
     return  ( this.x - _obj.x ) * ( this.x - _obj.x )
           + ( this.y - _obj.y ) * ( this.y - _obj.y )
           < ( this.r + _obj.r ) * ( this.r + _obj.r );
- 
+
+}
+
+BounceObject.prototype.fade_color = function( _new_color ) {
+    //setTimeout(  );
 }
 
 function Circle( _x, _y, _r, _vx, _vy, _c ) {
@@ -152,8 +160,18 @@ function update_locations() {
     if ( paused ) return; // this is kind of a hack
 
     for( var i = objs.length - 1; i >= 0; --i ) {
-        objs[i].x += objs[i].vx*1/FPS;
-        objs[i].y += objs[i].vy*1/FPS;
+
+        // update object positions based on velocity
+        objs[i].x  += objs[i].vx*1/FPS;
+        objs[i].y  += objs[i].vy*1/FPS;
+
+        // apply velocity change due to gravity
+        objs[i].vx += Gx;
+        objs[i].vy += Gy;
+
+        // apply friction
+        objs[i].vx *= 1 - FRICTION;
+        objs[i].vy *= 1 - FRICTION;
     }
 }
 /*********************************
@@ -188,6 +206,12 @@ function update_obj_collisions() {
 
     var o1 = new Object();
     var o2 = new Object();
+    var d = {};
+    var t = {};
+    var r = {};
+    var l = 0;
+    var v = {};
+    var vcpt = {};
 
 	obj_pairs = pairs( objs );
 
@@ -199,28 +223,25 @@ function update_obj_collisions() {
         if ( o1.collide( o2 ) ) {
 
             // TODO: this can be optimized A LOT
-            var d = { x : o2.x - o1.x, 
+            d = { x : o2.x - o1.x, 
                       y : o2.y - o1.y };
 
             // vector tangent to the collision
-            var t = { x : -1*d.y,
-                      y : d.x };
-
-            t = normalize( t );
+            t = normalize( { x : -1 * ( o2.y-o1.y ), y : o2.x - o1.x } );
             
             // relative velocity between objects
-            var r = { x : o1.vx - o2.vx,
+            r = { x : o1.vx - o2.vx,
                       y : o1.vy - o2.vy };
 
             // length of velocity parallel to tangent
-            var l = r.x*t.x + r.y*t.y;
+            l = r.x*t.x + r.y*t.y;
 
             // velocity component parallel to tangent
-            var v = { x : l * t.x,
+            v = { x : l * t.x,
                       y : l * t.y };
 
             // velocity component perpendicular to the tangent
-            var vcpt = { x : r.x - v.x,
+            vcpt = { x : r.x - v.x,
                          y : r.y - v.y };
 
             o1.vx -= vcpt.x;
@@ -272,6 +293,19 @@ function pairs( _arr ) {
 }
 
 
+/*************************
+ * object layout presets *
+ *************************/
+function POOL() {
+    Gx = 0;
+    Gy = 0;
+    FRICTION = 0.002;
+    objs = [
+        new Circle(  50     ,   300 , 14, 120, 0, "rgb(255,255,255)" ),
+        new Circle(  200    ,   300 , 14,   0, 0, "yellow" ),
+    ];
+}
+
 
 
 window.onload = function() {
@@ -299,19 +333,19 @@ window.onload = function() {
 
     /*
     */
-    for( var i = 0; i < 40; ++i ) {
+    for( var i = 0; i < OBJ_COUNT; ++i ) {
 
         // create values for the object
-        x   = x_positions[ i % x_positions.length ];
-        y   = y_positions[ Math.floor( i / x_positions.length ) % y_positions.length ];
-        v_x = Math.random() * OBJ_MAX_VELOCITY*2 - OBJ_MAX_VELOCITY;
-        v_y = Math.random() * OBJ_MAX_VELOCITY*2 - OBJ_MAX_VELOCITY;
-        r   = Math.floor( Math.random() * 200 + 55 ); // random value 55..255
-        g   = Math.floor( Math.random() * 200 + 55 );
-        b   = Math.floor( Math.random() * 200 + 55 );
+        var x   = x_positions[ i % x_positions.length ];
+        var y   = y_positions[ Math.floor( i / x_positions.length ) % y_positions.length ];
+        var v_x = Math.random() * OBJ_MAX_VELOCITY*2 - OBJ_MAX_VELOCITY;
+        var v_y = Math.random() * OBJ_MAX_VELOCITY*2 - OBJ_MAX_VELOCITY;
+        var red = Math.floor( Math.random() * 200 + 55 ); // random value 55..255
+        var grn = Math.floor( Math.random() * 200 + 55 );
+        var blu = Math.floor( Math.random() * 200 + 55 );
 
         // add the object to the scene
-        var color = 'rgb(' + r + ',' + g + ',' + b + ')';
+        var color = "grey";
         var new_obj = new Circle( x, y, OBJ_R, v_x, v_y, color );
 
         objs.push( new_obj );
@@ -330,16 +364,18 @@ window.onload = function() {
 
 </head>
 <body>
-<pre>
-bounce demo
+
+<h1>bouncey</h1>
 
 <button onclick="paused++;paused%=2;">Pause</button>
+
 
 <canvas id="cnvs" width="500" height="375">
 </canvas>
 
-</pre>
 
+<button onclick="objs = [ new Circle( 20, 20, 20, 200, 200, {r:255,g:0,b:0})];">One Circle</button>
+<button onclick="POOL();">POOL</button>
 
 
 </body></html>
