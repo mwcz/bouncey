@@ -23,30 +23,11 @@
 <script type="text/javascript">
 <!--
 
-/*******************
- * Global settings *
- *******************/
-var FPS              = 60;              // frames per second
-var PERIOD           = 1000 / FPS;      // frames last PERIOD milliseconds
-var W                = 500;             // canvas width
-var H                = 375;             // canvas height
-var OBJ_R            = 4;
-var OBJ_PAD          = 5;               // padding around the starting positions of the objects
-var OBJ_WIDTH        = OBJ_R + OBJ_PAD; // width of an object, including padding
-var OBJ_HEIGHT       = OBJ_R + OBJ_PAD; // height of an object, including padding
-var OBJ_MAX_VELOCITY = 100;             // object maximum velocity
-var OBJ_COUNT        = 200;             // object maximum velocity
-var PI2              = Math.PI * 2;
-var DEFAULT_COLOR    = [255,0,0];
-var Gy               = 9.618;           // gravity along y axis
-var Gx               = 0;               // gravity along x axis
-var FRICTION         = 0.01;            // friction coefficient
-var BACKGROUND_COLOR = 'rgb(0,0,0)';    // canvas background color
-var SHADOWOFFSETX = 3;
-var SHADOWOFFSETY = 3;
-var SHADOWBLUR = 0;
-var SHADOWCOLOR = "rgba(0,0,0,0.8)";
-var SHOW_VELOCITY = false;
+/********************
+ * Global settings  *
+ *  initialize vars *
+ ********************/
+ reset();
 
 /***********************
  * changeable settings *
@@ -141,16 +122,20 @@ function Circle( _x, _y, _r, _vx, _vy, _c ) {
  ********************************************************************/
 objs = [];
 
-function make_frame() {     // stuff to do for each frame
+// run the physics calculations
+function make_math(){
     update_wall_collisions();
     update_obj_collisions();
     update_locations();
+}
+
+// draw objects
+function make_frame() {     // stuff to do for each frame
     paint();
 
     document.getElementById('txt_velocity_sum').innerHTML = velocity_sum(); // update energy level
     document.getElementById('txt_velocity_sum_x').innerHTML = velocity_sum_x(); // update energy level
     document.getElementById('txt_velocity_sum_y').innerHTML = velocity_sum_y(); // update energy level
-
 }
 
 /****************************
@@ -163,8 +148,8 @@ function update_locations() {
     for( var i = objs.length - 1; i >= 0; --i ) {
 
         // update object positions based on velocity
-        objs[i].x  += objs[i].vx*1/FPS;
-        objs[i].y  += objs[i].vy*1/FPS;
+        objs[i].x  += objs[i].vx*1/PCALC;
+        objs[i].y  += objs[i].vy*1/PCALC;
 
         // apply velocity change due to gravity
         objs[i].vx += Gx;
@@ -331,7 +316,9 @@ function velocity_sum() {
 
 function reset() {
     FPS              = 60;              // frames per second
+    PCALC            = 180;             // physics calculations, faster than fps
     PERIOD           = 1000 / FPS;      // frames last PERIOD milliseconds
+    PPER             = 1000 / PCALC;    // physics calc in milliseconds
     W                = 500;             // canvas width
     H                = 375;             // canvas height
     OBJ_R            = 4;
@@ -346,7 +333,12 @@ function reset() {
     Gx               = 0;               // gravity along x axis
     FRICTION         = 0.01;            // friction coefficient
     BACKGROUND_COLOR = 'rgb(0,0,0)';    // canvas background color
+    SHADOWOFFSETX = 3;
+    SHADOWOFFSETY = 3;
+    SHADOWBLUR = 0;
+    SHADOWCOLOR = "rgba(0,0,0,0.8)";
     SHOW_VELOCITY    = false;
+
     canvas_element.style.backgroundColor=BACKGROUND_COLOR;
     canvas.shadowOffsetX = 0;
     canvas.shadowOffsetY = 0;
@@ -453,6 +445,7 @@ window.onload = function() {
 
     canvas = canvas_element.getContext('2d');
 
+    setInterval( make_math, PPER );
     setInterval( make_frame, PERIOD );
 
 }
