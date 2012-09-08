@@ -27,7 +27,6 @@
  * Global settings  *
  *  initialize vars *
  ********************/
- reset();
 
 /***********************
  * changeable settings *
@@ -439,11 +438,12 @@ function RANDOM() {
 window.onload = function() {
 
     canvas_element                       = document.getElementById('cnvs');
+    canvas                               = canvas_element.getContext('2d');
+    reset();
     canvas_element.width                 = W;
     canvas_element.height                = H;
     canvas_element.style.backgroundColor = BACKGROUND_COLOR;
 
-    canvas = canvas_element.getContext('2d');
 
     setInterval( make_math, PPER );
     setInterval( make_frame, PERIOD );
